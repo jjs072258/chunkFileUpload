@@ -1,5 +1,10 @@
 package com.example.fileupload.controller;
 
+import com.example.fileupload.service.UploadService;
+import com.example.fileupload.vo.FileUploadVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +21,10 @@ public class UploadController {
 
     private static final String TEMP_DIR = "/tmp/uploads/";
     private static final String REAL_DIR = "/uploads/";
+    private static final Logger log = LoggerFactory.getLogger(UploadController.class);
+
+    @Autowired
+    private UploadService uploadService;
 
     @RequestMapping("/")
     public String index() {
@@ -25,6 +34,13 @@ public class UploadController {
     @GetMapping("/upload")
     public String uploadGet() {
         return "upload";
+    }
+
+    @PostMapping("/uploadFileCheck")
+    @ResponseBody
+    public FileUploadVO uploadFileCheck(@RequestBody FileUploadVO fileUploadVO) {
+        System.out.println(uploadService.uploadFileCheck(fileUploadVO));
+        return fileUploadVO;
     }
 
     @PostMapping("/upload")

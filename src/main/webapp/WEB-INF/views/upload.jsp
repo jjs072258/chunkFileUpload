@@ -14,10 +14,30 @@
 </div>
 </body>
 <script>
-    let uploadFileItem = null;
+    // const uploadFileItem = {
+    //     chunsSize : 0,
+    //     totalChunk : 0,
+    //     currentChunkPos : 0,
+    //     fileName : null,
+    //     fileSize : null,
+    // };
 
-    function uploadCheck(uploadFileItem){
-
+    function uploadFileCheck(file){
+        const data = {originalFileName:file.name ,originalFileSize : file.size};
+        console.log(data);
+        $.ajax({
+            url: '/uploadFileCheck',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            async: false,
+            success: function(response) {
+                console.log(response);
+            },
+            error: function(request, status, error) {
+                console.log("오류가 발생했습니다.");
+            }
+        });
     }
 
     $(document).ready(function(e) {
@@ -33,12 +53,10 @@
     });
 
     function uploadFile(file){
-        const CHUNK_SIZE = 1024 * 500; //500kb
-        const totalChunk = Math.ceil(file.size/CHUNK_SIZE);
-        let currentChunkPos = 0;
-
-        uploadProcess(file,currentChunkPos,totalChunk,CHUNK_SIZE);
+        uploadFileCheck(file);
+        // uploadProcess(file,currentChunkPos,totalChunk,CHUNK_SIZE);
     }
+
 
     //업로드 프로세스
     function uploadProcess(file,currentChunkPos,totalChunk,CHUNK_SIZE){
