@@ -6,5 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Mapper
 public interface UploadMapper {
-    FileUploadVO selectFile();
+    FileUploadVO selectFile(FileUploadVO vo);
+
+    int insertUploadInfo(FileUploadVO vo);
 }

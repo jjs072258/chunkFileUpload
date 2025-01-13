@@ -5,6 +5,7 @@ import com.example.fileupload.vo.FileUploadVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -38,9 +39,31 @@ public class UploadController {
 
     @PostMapping("/uploadFileCheck")
     @ResponseBody
-    public FileUploadVO uploadFileCheck(@RequestBody FileUploadVO fileUploadVO) {
-        System.out.println(uploadService.uploadFileCheck(fileUploadVO));
-        return fileUploadVO;
+    public ResponseEntity<FileUploadVO> uploadFileCheck(@RequestBody FileUploadVO fileUploadVO) {
+        FileUploadVO result = uploadService.uploadFileCheck(fileUploadVO);
+        if(result == null){ // 새로운 파일
+            String tempFileName = UUID.randomUUID().toString().replaceAll("-", "");
+            int chunkSize = 102400;
+            int chunkCount = (int)Math.ceil((double)fileUploadVO.getOriginalFileSize() / (double)chunkSize);
+
+            FileUploadVO tempFile = new FileUploadVO();
+            tempFile.setFileID(tempFileName);
+            tempFile.setFilePath(TEMP_DIR+"/"+tempFileName);
+            tempFile.setFileCategory("");
+            tempFile.setOriginalFileName(fileUploadVO.getOriginalFileName());
+            tempFile.setOriginalFileSize(fileUploadVO.getOriginalFileSize());
+            tempFile.setChunkSize(chunkSize); // 100kb
+            tempFile.setChunkCount(chunkCount);
+            tempFile.setChunkPosition(0);
+            tempFile.setRegistrationID("jisung0509");
+
+            if(uploadService.addUploadFileInfo(tempFile)){
+                return new ResponseEntity<>(tempFile,HttpStatus.OK);
+            }else{
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+        }
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/upload")

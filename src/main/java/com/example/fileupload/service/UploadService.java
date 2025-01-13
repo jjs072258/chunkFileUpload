@@ -13,6 +13,10 @@ public class UploadService {
     private UploadMapper uploadMapper;
 
     public FileUploadVO uploadFileCheck(FileUploadVO vo){
-        return uploadMapper.selectFile();
+        return uploadMapper.selectFile(vo);
+    }
+
+    public boolean addUploadFileInfo(FileUploadVO vo){
+        return uploadMapper.insertUploadInfo(vo) == 1;
     }
 }

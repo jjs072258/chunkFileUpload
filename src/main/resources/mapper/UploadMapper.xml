@@ -1,8 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.fileupload.repository.UploadMapper">
-    <select id="selectFile" resultType="com.example.fileupload.vo.FileUploadVO">
-        SELECT * FROM TB_UP_TEMPFILE;
+
+    <resultMap id="UploadFileMap" type="com.example.fileupload.vo.FileUploadVO">
+        <result column="SEQ" property="seq"/>
+        <result column="FILE_ID" property="fileID"/>
+        <result column="FILE_PATH" property="filePath"/>
+        <result column="FILE_CATE" property="category"/>
+        <result column="ORGIN_FILE_NM" property="originalFileName"/>
+        <result column="ORGIN_FILE_SIZE" property="orginalFileSize"/>
+        <result column="CHUNK_SIZE" property="chunkSize"/>
+        <result column="CHUNK_COUNT" property="chunkCount"/>
+        <result column="CHUNK_POS" property="chunkPosition"/>
+        <result column="REG_ID" property="registrationID"/>
+        <result column="REG_DTM" property="registrationDate"/>
+    </resultMap>
+
+    <select id="selectFile" parameterType="com.example.fileupload.vo.FileUploadVO" resultMap="UploadFileMap">
+        SELECT FILE_ID,
+               FILE_PATH,
+               CHUNK_SIZE,
+               CHUNK_COUNT,
+               CHUNK_POS,
+               REG_ID
+        FROM TB_UP_TEMPFILE
+        WHERE ORGIN_FILE_NM = #{originalFileName}
+          AND ORGIN_FILE_SIZE = #{originalFileSize}
+          AND REG_ID = #{registrationID}
     </select>
+
+    <insert id="insertUploadInfo" useGeneratedKeys="true" keyProperty="seq" parameterType="com.example.fileupload.vo.FileUploadVO">
+        INSERT INTO TB_UP_TEMPFILE
+        (
+            FILE_ID,
+            FILE_PATH,
+            FILE_CATE,
+            ORGIN_FILE_NM,
+            ORGIN_FILE_SIZE,
+            CHUNK_SIZE,
+            CHUNK_COUNT,
+            CHUNK_POS,
+            REG_ID
+        )
+        VALUES
+            (
+                #{fileID},
+                #{filePath},
+                #{fileCategory},
+                #{originalFileName},
+                #{originalFileSize},
+                #{chunkSize},
+                #{chunkCount},
+                #{chunkPosition},
+                #{registrationID}
+            )
+    </insert>
 
 </mapper>

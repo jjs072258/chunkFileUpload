@@ -28,8 +28,9 @@
         $.ajax({
             url: '/uploadFileCheck',
             type: 'POST',
+            data : JSON.stringify(data),
             contentType: 'application/json',
-            data: JSON.stringify(data),
+            dataType: "json",
             async: false,
             success: function(response) {
                 console.log(response);
