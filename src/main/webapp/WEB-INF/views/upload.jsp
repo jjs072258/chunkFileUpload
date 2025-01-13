@@ -14,13 +14,15 @@
 </div>
 </body>
 <script>
-    // const uploadFileItem = {
-    //     chunsSize : 0,
-    //     totalChunk : 0,
-    //     currentChunkPos : 0,
-    //     fileName : null,
-    //     fileSize : null,
-    // };
+    const uploadFileItem = {
+
+        file : null,
+        fileID : null,
+        fileSize : null,
+        chunkSize : 0,
+        chunkCount : 0,
+        chunkPosition : 0
+    };
 
     function uploadFileCheck(file){
         const data = {originalFileName:file.name ,originalFileSize : file.size};
@@ -33,7 +35,13 @@
             dataType: "json",
             async: false,
             success: function(response) {
-                console.log(response);
+                    uploadFileItem.file = file;
+                    uploadFileItem.fileID = response.fileID;
+                    uploadFileItem.fileSize = response.originalFileSize;
+                    uploadFileItem.chunkSize = response.chunkSize;
+                    uploadFileItem.chunkCount = response.chunkCount;
+                    uploadFileItem.chunkPosition = response.chunkPosition;
+                    uploadProcess();
             },
             error: function(request, status, error) {
                 console.log("오류가 발생했습니다.");
@@ -55,15 +63,14 @@
 
     function uploadFile(file){
         uploadFileCheck(file);
-        // uploadProcess(file,currentChunkPos,totalChunk,CHUNK_SIZE);
     }
 
 
     //업로드 프로세스
-    function uploadProcess(file,currentChunkPos,totalChunk,CHUNK_SIZE){
+    function uploadProcess(uploadFileItem){
 
         // 업로드 파일 시작 위치 (Byte)
-        const startPos = currentChunkPos * CHUNK_SIZE
+        const startPos = up * CHUNK_SIZE
         // 업로드 파일 종료 위치 (Byte)
         const endPos = Math.min(file.size , startPos + CHUNK_SIZE);
         // 청크 데이터
