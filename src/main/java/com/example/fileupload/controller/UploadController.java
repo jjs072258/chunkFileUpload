@@ -2,6 +2,7 @@ package com.example.fileupload.controller;
 
 import com.example.fileupload.service.UploadService;
 import com.example.fileupload.vo.FileUploadVO;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,15 +70,11 @@ public class UploadController {
     @PostMapping("/upload")
     @ResponseBody
     //@ResponseBody 어노테이션이 붙은 메서드의 반환 값이 Map이면, 이를 자동으로 JSON으로 변환하여 응답 본문(body)에 담아 보냅니다.
-    public Map<String,Object> uploadPost(@RequestParam("file") MultipartFile chunkData,
-                          @RequestParam("currentChunkPos") int currentChunkPos,
-                          @RequestParam("totalChunk") int totalChunk,
-                          @RequestParam("fileName") String fileName
-    ) throws IOException {
+    public Map<String,Object> uploadPost(FileUploadVO uploadVO) throws IOException {
 
         Map<String,Object> response = new HashMap<>();
 
-        String tempFileName = fileName +".part"+currentChunkPos;
+        String tempFileName =  uploadVO.getFileID()+".part"+uploadVO.getChunkPosition();
         File tempFile = new File(TEMP_DIR,tempFileName);
 
         File tempDir = new File(TEMP_DIR);
@@ -86,7 +83,7 @@ public class UploadController {
         }
 
 //        try 블록의 괄호 () 안에 선언된 리소스(여기서는 InputStream과 FileOutputStream)는 try 블록이 종료될 때 자동으로 close() 메서드가 호출됩니다.
-        try (InputStream in = chunkData.getInputStream();
+        try (InputStream in = uploadVO.getChunkData().getInputStream();
              FileOutputStream out = new FileOutputStream(tempFile);
         ){
             byte[] buffer = new byte[1024];
@@ -100,15 +97,15 @@ public class UploadController {
             return response;
         }
 
-        if(currentChunkPos == totalChunk - 1){
-            File realFile = new File(REAL_DIR,fileName);
+        if(uploadVO.getChunkPosition() == uploadVO.getChunkCount() - 1){
+            File realFile = new File(REAL_DIR,uploadVO.getFileID());
             File readDir = new File(REAL_DIR);
             if (!readDir.exists()) {
                 readDir.mkdirs();
             }
             try (FileOutputStream fos = new FileOutputStream(realFile)){
-                for(int i=0;i<totalChunk;i++){
-                    File part = new File(tempDir,fileName +".part"+i);
+                for(int i=0;i<uploadVO.getChunkCount();i++){
+                    File part = new File(tempDir,uploadVO.getFileID() +".part"+i);
                     try (InputStream fis = Files.newInputStream(part.toPath())) {
                         byte[] buffer = new byte[1024];
                         int bytesRead;

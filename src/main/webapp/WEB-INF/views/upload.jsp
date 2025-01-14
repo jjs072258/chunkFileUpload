@@ -41,7 +41,7 @@
                     uploadFileItem.chunkSize = response.chunkSize;
                     uploadFileItem.chunkCount = response.chunkCount;
                     uploadFileItem.chunkPosition = response.chunkPosition;
-                    uploadProcess();
+                    uploadProcess(uploadFileItem);
             },
             error: function(request, status, error) {
                 console.log("오류가 발생했습니다.");
@@ -55,32 +55,30 @@
             const currentFile = e.target.files[0];
 
             if (currentFile){
-                uploadFile(currentFile);
+                uploadFileCheck(currentFile);
+                uploadProcess(uploadFileItem);
             }
 
         })
     });
 
-    function uploadFile(file){
-        uploadFileCheck(file);
-    }
 
 
     //업로드 프로세스
+    //기존 filecheck를 통해서 업로드 정보를 가져옴
     function uploadProcess(uploadFileItem){
-
         // 업로드 파일 시작 위치 (Byte)
-        const startPos = up * CHUNK_SIZE
+        const startPos = uploadFileItem.chunkPosition * uploadFileItem.chunkSize
         // 업로드 파일 종료 위치 (Byte)
-        const endPos = Math.min(file.size , startPos + CHUNK_SIZE);
+        const endPos = Math.min(uploadFileItem.file.size , startPos + uploadFileItem.chunkSize);
         // 청크 데이터
-        let chunkData = file.slice(startPos, endPos);
+        let chunkData = uploadFileItem.file.slice(startPos, endPos);
 
         const formData = new FormData();
-        formData.append('fileName',file.name);
-        formData.append('currentChunkPos',currentChunkPos);
-        formData.append('totalChunk',totalChunk);
-        formData.append('file',chunkData);
+        formData.append('fileID',uploadFileItem.fileID);
+        formData.append('chunkPosition',uploadFileItem.chunkPosition);
+        formData.append('chunkCount',uploadFileItem.chunkCount);
+        formData.append('chunkData',chunkData);
 
         $.ajax({
             url: '/upload',
@@ -91,9 +89,9 @@
             processData: false,
             success: function(response) {
                 if(response.success){
-                    currentChunkPos++;
-                    if(currentChunkPos < totalChunk){
-                        uploadProcess(file,currentChunkPos,totalChunk,CHUNK_SIZE);
+                    uploadFileItem.chunkPosition++;
+                    if(uploadFileItem.chunkPosition < uploadFileItem.chunkCount){
+                        uploadProcess(uploadFileItem);
                     }else{
                         console.log("청크 업로드 완료");
                     }
