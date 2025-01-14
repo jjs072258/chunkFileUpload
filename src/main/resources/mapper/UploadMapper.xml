@@ -16,6 +16,30 @@
         <result column="REG_DTM" property="registrationDate"/>
     </resultMap>
 
+    <!--
+    업로드 파일 정보를 조회합니다.
+    -->
+    <select id="selectTempUplopadFile" parameterType="com.example.fileupload.vo.FileUploadVO" resultMap="UploadFileMap">
+        SELECT FILE_ID,
+               FILE_PATH,
+               CHUNK_SIZE,
+               CHUNK_COUNT,
+               CHUNK_POS,
+               REG_ID
+        FROM TB_UP_TEMPFILE
+        WHERE FILE_ID = #{fileID}
+          AND REG_ID = #{registrationID}
+    </select>
+
+    <update id="updateTempUploadFile" parameterType="com.example.fileupload.vo.FileUploadVO">
+        UPDATE TB_UP_TEMPFILE
+        SET CHUNK_POS = #{chunkPosition},
+            MOD_DTM = NOW()
+        WHERE FILE_ID = #{fileID}
+          AND REG_ID = #{registrationID}
+    </update>
+
+
     <select id="selectFile" parameterType="com.example.fileupload.vo.FileUploadVO" resultMap="UploadFileMap">
         SELECT FILE_ID,
                FILE_PATH,

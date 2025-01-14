@@ -19,4 +19,12 @@ public class UploadService {
     public boolean addUploadFileInfo(FileUploadVO vo){
         return uploadMapper.insertUploadInfo(vo) == 1;
     }
+
+    public FileUploadVO getTempUplopadFile(FileUploadVO vo){
+        return uploadMapper.selectTempUplopadFile(vo);
+    }
+
+    public boolean updateTempUplopadFile(FileUploadVO vo){
+        return uploadMapper.updateTempUploadFile(vo) == 1;
+    }
 }
