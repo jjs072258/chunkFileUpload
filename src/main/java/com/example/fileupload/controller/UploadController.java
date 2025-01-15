@@ -24,6 +24,7 @@ public class UploadController {
     private static final String TEMP_DIR = "/tmp/uploads/";
     private static final String REAL_DIR = "/uploads/";
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
+    private static final int CHUNK_SIZE = 1024 * 10;
 
     @Autowired
     private UploadService uploadService;
@@ -43,9 +44,9 @@ public class UploadController {
     public ResponseEntity<FileUploadVO> uploadFileCheck(@RequestBody FileUploadVO fileUploadVO) {
         FileUploadVO result = uploadService.uploadFileCheck(fileUploadVO);
         if(result == null){ // 새로운 파일
+            // 임시 파일 이름
             String tempFileName = UUID.randomUUID().toString().replaceAll("-", "");
-            int chunkSize = 102400;
-            int chunkCount = (int)Math.ceil((double)fileUploadVO.getOriginalFileSize() / (double)chunkSize);
+            int chunkCount = (int)Math.ceil((double)fileUploadVO.getOriginalFileSize() / (double)CHUNK_SIZE); // 청크 수
 
             FileUploadVO tempFile = new FileUploadVO();
             tempFile.setFileID(tempFileName);
@@ -53,7 +54,7 @@ public class UploadController {
             tempFile.setFileCategory("");
             tempFile.setOriginalFileName(fileUploadVO.getOriginalFileName());
             tempFile.setOriginalFileSize(fileUploadVO.getOriginalFileSize());
-            tempFile.setChunkSize(chunkSize); // 100kb
+            tempFile.setChunkSize(CHUNK_SIZE); // 100kb
             tempFile.setChunkCount(chunkCount);
             tempFile.setChunkPosition(0);
             tempFile.setRegistrationID("jisung0509");
@@ -63,25 +64,31 @@ public class UploadController {
             }else{
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
+        }else{ // 기존에 파일이 있으면
+            return new ResponseEntity<>(result,HttpStatus.OK);
         }
-        return new ResponseEntity<>(HttpStatus.OK);
+
     }
 
     @PostMapping("/upload")
     @ResponseBody
     //파일아이디 , 현재청크위치 , 청크파일을 가져옴
-    public Map<String, Object> uploadPost(FileUploadVO uploadVO) throws IOException {
+    public Map<String, Object> uploadPost(FileUploadVO fileUploadVO) throws IOException {
 
-        String fileID = uploadVO.getFileID();
-        int chunkPosition = uploadVO.getChunkPosition();
-        MultipartFile chunkData = uploadVO.getChunkData();
+        String fileID = fileUploadVO.getFileID();
+        int chunkPosition = fileUploadVO.getChunkPosition();
+        MultipartFile chunkData = fileUploadVO.getChunkData();
 
         //업로드 중인건지 확인
-        FileUploadVO tempUploadFile = uploadService.getTempUplopadFile(uploadVO);
+        FileUploadVO tempUploadFile = uploadService.getTempUplopadFile(fileUploadVO);
         if(tempUploadFile != null){
-            if(chunkPosition == tempUploadFile.getChunkPosition()){
+            if(chunkPosition == tempUploadFile.getChunkPosition()){ // 업로드할 청크 위치가 맞으면
                 String tempFileName =  tempUploadFile.getFileID()+".part"+tempUploadFile.getChunkPosition();
                 File tempFile = new File(tempUploadFile.getFilePath(),tempFileName);
+                File tempDir = new File(tempUploadFile.getFilePath());
+                if (!tempDir.exists()) {
+                    tempDir.mkdirs();
+                }
                 try (InputStream in = chunkData.getInputStream();
                      FileOutputStream out = new FileOutputStream(tempFile);
                 ){
@@ -90,8 +97,9 @@ public class UploadController {
                     while ((bytesRead = in.read(buffer)) != -1){
                         out.write(buffer,0,bytesRead);
                     }
+
                     chunkPosition++;
-                    tempUploadFile.setChunkPosition(chunkPosition);
+                    tempUploadFile.setChunkPosition(chunkPosition); //청크 포지션 증가
                     boolean success = uploadService.updateTempUplopadFile(tempUploadFile);
                     if(success){
                         Map<String, Object> response = new HashMap<>();
@@ -102,15 +110,16 @@ public class UploadController {
                         response.put("chunkPosition", tempUploadFile.getChunkPosition());
                         response.put("message", "청크 파일이 업로드 되었습니다.");
 
+                        //끝까지 업로드가 되었으면
                         if(chunkPosition == tempUploadFile.getChunkCount()){
-                            File realFile = new File(REAL_DIR,uploadVO.getFileID());
+                            File realFile = new File(REAL_DIR,fileUploadVO.getOriginalFileName());
                             File readDir = new File(REAL_DIR);
                             if (!readDir.exists()) {
                                 readDir.mkdirs();
                             }
                             try (FileOutputStream fos = new FileOutputStream(realFile)){
                                 for(int i=0;i<tempUploadFile.getChunkCount();i++){
-                                    File part = new File(tempUploadFile.getFilePath(),uploadVO.getFileID() +".part"+i);
+                                    File part = new File(tempUploadFile.getFilePath(),fileUploadVO.getFileID() +".part"+i);
                                     try (InputStream fis = Files.newInputStream(part.toPath())) {
                                         byte[] buffer2 = new byte[1024];
                                         int bytesRead2;
