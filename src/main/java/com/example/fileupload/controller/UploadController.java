@@ -21,7 +21,7 @@ import java.util.UUID;
 @Controller
 public class UploadController {
 
-    private static final String TEMP_DIR = "/tmp/uploads/";
+    private static final String TEMP_DIR = "/tmp/uploads";
     private static final String REAL_DIR = "/uploads/";
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
     private static final int CHUNK_SIZE = 1024 * 10;
@@ -73,12 +73,13 @@ public class UploadController {
     @PostMapping("/upload")
     @ResponseBody
     //파일아이디 , 현재청크위치 , 청크파일을 가져옴
-    public Map<String, Object> uploadPost(FileUploadVO fileUploadVO) throws IOException {
+    public ResponseEntity<FileUploadVO> uploadPost(FileUploadVO fileUploadVO) throws IOException {
 
         String fileID = fileUploadVO.getFileID();
         int chunkPosition = fileUploadVO.getChunkPosition();
         MultipartFile chunkData = fileUploadVO.getChunkData();
 
+        boolean success = false;
         //업로드 중인건지 확인
         FileUploadVO tempUploadFile = uploadService.getTempUplopadFile(fileUploadVO);
         if(tempUploadFile != null){
@@ -100,43 +101,35 @@ public class UploadController {
 
                     chunkPosition++;
                     tempUploadFile.setChunkPosition(chunkPosition); //청크 포지션 증가
-                    boolean success = uploadService.updateTempUplopadFile(tempUploadFile);
-                    if(success){
-                        Map<String, Object> response = new HashMap<>();
-                        response.put("result", true);
-                        response.put("fileID", fileID);
-                        response.put("chunkSize", tempUploadFile.getChunkSize());
-                        response.put("chunkCount", tempUploadFile.getChunkCount());
-                        response.put("chunkPosition", tempUploadFile.getChunkPosition());
-                        response.put("message", "청크 파일이 업로드 되었습니다.");
-
-                        //끝까지 업로드가 되었으면
-                        if(chunkPosition == tempUploadFile.getChunkCount()){
-                            File realFile = new File(REAL_DIR,fileUploadVO.getOriginalFileName());
-                            File readDir = new File(REAL_DIR);
-                            if (!readDir.exists()) {
-                                readDir.mkdirs();
-                            }
-                            try (FileOutputStream fos = new FileOutputStream(realFile)){
-                                for(int i=0;i<tempUploadFile.getChunkCount();i++){
-                                    File part = new File(tempUploadFile.getFilePath(),fileUploadVO.getFileID() +".part"+i);
-                                    try (InputStream fis = Files.newInputStream(part.toPath())) {
-                                        byte[] buffer2 = new byte[1024];
-                                        int bytesRead2;
-                                        while ((bytesRead2 = fis.read(buffer2)) != -1) {
-                                            fos.write(buffer2, 0, bytesRead2);
-                                        }
+                    success = uploadService.updateTempUplopadFile(tempUploadFile);
+                }catch (Exception e){
+                    return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+                }
+                if(success){
+                    //끝까지 업로드가 되었으면
+                    if(chunkPosition == tempUploadFile.getChunkCount()){
+                        File realFile = new File(REAL_DIR+"/"+fileUploadVO.getFileID());
+                        File readDir = new File(REAL_DIR);
+                        if (!readDir.exists()) {
+                            readDir.mkdirs();
+                        }
+                        try (FileOutputStream fos = new FileOutputStream(realFile)){
+                            for(int i=0;i<tempUploadFile.getChunkCount();i++){
+                                // 임시폴더에 있는 파일 가져오기
+                                File part = new File(tempUploadFile.getFilePath()+"/"+tempUploadFile.getFileID()+".part"+i);
+                                try (InputStream fis = Files.newInputStream(part.toPath())) {
+                                    byte[] buffer = new byte[1024];
+                                    int bytesRead;
+                                    while ((bytesRead = fis.read(buffer)) != -1) {
+                                        fos.write(buffer, 0, bytesRead);
                                     }
                                 }
                             }
                         }
-                        return response;
                     }
-                }catch (Exception e){
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("success", false);
-                    response.put("message", "청크 파일 업로드를 실패하였습니다.");
-                    return response;
+                    return new ResponseEntity<>(tempUploadFile,HttpStatus.OK);
+                }else{
+                    return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
                 }
             }
         }
