@@ -14,6 +14,22 @@
 </div>
 </body>
 <script>
+    const policy = {
+        maxFileSize : 1024 * 1024 * 1024,
+        allowFileType : [
+            'video/mp4', //MP4
+            'application/pdf', // PDF
+            'application/msword', // DOC
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+            'application/vnd.ms-excel', // XLS
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
+            'application/vnd.ms-powerpoint', // PPT
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
+            'text/plain', // TXT
+            'text/csv', // CSV
+
+        ]
+    }
     const uploadFileItem = {
         file : null,
         fileID : "",
@@ -22,31 +38,53 @@
         chunkCount : 0,
         chunkPosition : 0
     };
+    $(document).ready(function(e) {
+
+        $("#uploadForm1 > input[name=file]").change(function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            const selectedFile = e.target.files[0];
+            if (selectedFile){
+                uploadFileCheck(selectedFile);
+            }
+
+        })
+    });
+
 
     function uploadFileCheck(file){
-        const data = {originalFileName:file.name ,originalFileSize : file.size,registrationID : "jisung0509"};
-        // 업로드할 파일 체크
-        $.ajax({
-            url: '/uploadFileCheck',
-            type: 'POST',
-            data : JSON.stringify(data),
-            contentType: 'application/json',
-            dataType: "json",
-            async: false,
-            success: function(response) {
-                    uploadFileItem.file = file;
-                    uploadFileItem.fileID = response.fileID;
-                    //TODO - filepath도 가져와야하나?
-                    uploadFileItem.fileSize = response.originalFileSize;
-                    uploadFileItem.chunkSize = response.chunkSize;
-                    uploadFileItem.chunkCount = response.chunkCount;
-                    uploadFileItem.chunkPosition = response.chunkPosition;
-                    uploadProcess(uploadFileItem);
-            },
-            error: function(request, status, error) {
-                console.log("오류가 발생했습니다.");
-            }
-        });
+
+        if(file.size > policy.maxFileSize){
+            alert("업로드 가능한 사이즈를 초과했습니다.");
+            return;
+        }
+        if(!policy.allowFileType.includes(file.type)){
+            alert("해당 파일 형식은 지원하지 않습니다.");
+            return;
+        }
+        // const data = {originalFileName:file.name ,originalFileSize : file.size,registrationID : "jisung0509"};
+        // // 업로드할 파일 체크
+        // $.ajax({
+        //     url: '/uploadFileCheck',
+        //     type: 'POST',
+        //     data : JSON.stringify(data),
+        //     contentType: 'application/json',
+        //     dataType: "json",
+        //     async: false,
+        //     success: function(response) {
+        //         uploadFileItem.file = file;
+        //         uploadFileItem.fileID = response.fileID;
+        //         //TODO - filepath도 가져와야하나?
+        //         uploadFileItem.fileSize = response.originalFileSize;
+        //         uploadFileItem.chunkSize = response.chunkSize;
+        //         uploadFileItem.chunkCount = response.chunkCount;
+        //         uploadFileItem.chunkPosition = response.chunkPosition;
+        //         uploadProcess(uploadFileItem);
+        //     },
+        //     error: function(request, status, error) {
+        //         console.log("오류가 발생했습니다.");
+        //     }
+        // });
     }
 
     //업로드 프로세스
@@ -82,19 +120,6 @@
             }
         });
     }
-
-    $(document).ready(function(e) {
-
-        $("#uploadForm1 > input[name=file]").change(function(e){
-            const currentFile = e.target.files[0];
-
-            if (currentFile){
-                uploadFileCheck(currentFile);
-            }
-
-        })
-    });
-
 
 </script>
 </html>
