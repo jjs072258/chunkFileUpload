@@ -24,4 +24,5 @@ public class FileUploadVO {
     private String registrationID;
     private Date registrationDate;
     private Date modificationDate;
+    private int status;
 }

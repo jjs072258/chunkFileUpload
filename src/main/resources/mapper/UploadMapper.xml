@@ -8,7 +8,7 @@
         <result column="FILE_PATH" property="filePath"/>
         <result column="FILE_CATE" property="category"/>
         <result column="ORGIN_FILE_NM" property="originalFileName"/>
-        <result column="ORGIN_FILE_SIZE" property="orginalFileSize"/>
+        <result column="ORGIN_FILE_SIZE" property="originalFileSize"/>
         <result column="CHUNK_SIZE" property="chunkSize"/>
         <result column="CHUNK_COUNT" property="chunkCount"/>
         <result column="CHUNK_POS" property="chunkPosition"/>
@@ -22,6 +22,7 @@
     <select id="selectTempUplopadFile" parameterType="com.example.fileupload.vo.FileUploadVO" resultMap="UploadFileMap">
         SELECT FILE_ID,
                FILE_PATH,
+               ORGIN_FILE_NM,
                CHUNK_SIZE,
                CHUNK_COUNT,
                CHUNK_POS,

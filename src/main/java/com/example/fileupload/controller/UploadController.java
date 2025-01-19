@@ -108,7 +108,7 @@ public class UploadController {
                 if(success){
                     //끝까지 업로드가 되었으면
                     if(chunkPosition == tempUploadFile.getChunkCount()){
-                        File realFile = new File(REAL_DIR+"/"+fileUploadVO.getFileID());
+                        File realFile = new File(REAL_DIR+"/"+tempUploadFile.getOriginalFileName());
                         File readDir = new File(REAL_DIR);
                         if (!readDir.exists()) {
                             readDir.mkdirs();
@@ -126,14 +126,19 @@ public class UploadController {
                                 }
                             }
                         }
+                        tempUploadFile.setStatus(3);
+                        return new ResponseEntity<>(tempUploadFile,HttpStatus.OK);
+                    }else{ //계속 진행
+                        tempUploadFile.setStatus(2);
+                        return new ResponseEntity<>(tempUploadFile,HttpStatus.OK);
                     }
-                    return new ResponseEntity<>(tempUploadFile,HttpStatus.OK);
+
                 }else{
                     return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
                 }
             }
         }
-        return null;
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
 }
