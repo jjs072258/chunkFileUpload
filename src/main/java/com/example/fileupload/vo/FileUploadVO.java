@@ -7,8 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Date;
 
-@Getter
-@Setter
+@Data
 public class FileUploadVO {
     private int seq;
     private String fileID;
@@ -25,4 +24,5 @@ public class FileUploadVO {
     private Date registrationDate;
     private Date modificationDate;
     private int status;
+    private int fileIndex;
 }

@@ -24,7 +24,7 @@ public class UploadController {
     private static final String TEMP_DIR = "/tmp/uploads";
     private static final String REAL_DIR = "/uploads/";
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
-    private static final int CHUNK_SIZE = 1024 * 10;
+    private static final int CHUNK_SIZE = 1024 * 100;
 
     @Autowired
     private UploadService uploadService;
@@ -57,6 +57,7 @@ public class UploadController {
             tempFile.setChunkSize(CHUNK_SIZE); // 100kb
             tempFile.setChunkCount(chunkCount);
             tempFile.setChunkPosition(0);
+            tempFile.setFileIndex(fileUploadVO.getFileIndex());
             tempFile.setRegistrationID("jisung0509");
 
             if(uploadService.addUploadFileInfo(tempFile)){

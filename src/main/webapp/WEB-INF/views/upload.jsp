@@ -78,6 +78,8 @@
 </div>
 </body>
 <script>
+
+
     const policy = {
         maxFileSize : 1024 * 1024 * 1024,
         allowFileType : [
@@ -95,17 +97,7 @@
             'image/jpeg'  // JPEG 추가
         ]
     }
-    const uploadFileList = [
-
-    ];
-    const uploadFileItem = {
-        file : null,
-        fileID : "",
-        chunkSize : 0,
-        chunkCount : 0,
-        chunkPosition : 0,
-        status: 0
-    };
+    const uploadFileList = [];
 
     $(document).ready(function(e) {
         let fileIndex = 0;
@@ -118,7 +110,6 @@
             e.preventDefault();
             e.stopPropagation();
             const selectedFiles = e.target.files;
-            console.log(selectedFiles);
             // 선택된 각 파일에 대해 UI 생성 및 정보 표시
             for (let i = 0; i < selectedFiles.length; i++) {
                 const selectedFile = selectedFiles[i];
@@ -134,18 +125,23 @@
             const fileIndex = $(this).data("file-index");
             $(this).prop("disabled", true); // 시작 버튼 비활성화
             $(this).parent().find(".stop-button").prop("disabled", false); // 중지 버튼 활성화
-            initialUpload(uploadFileList[fileIndex]);
-
+            if(uploadFileList[fileIndex].status == 0){
+                uploadFileList[fileIndex].status = 1;
+            } else if(uploadFileList[fileIndex] == 4){
+                uploadFileList[fileIndex].status = 3;
+            }
+            uploadProcess(uploadFileList[fileIndex]);
         });
         // 중지 버튼 클릭 이벤트
         $(document).on("click",".stop-button",function() {
             const fileIndex = $(this).data("file-index");
+            uploadFileList[fileIndex].status = 3;
             $(this).prop("disabled", true); // 중비 버튼 비활성화
-            $(this).parent().find(".start-button").prop("disabled", false); // 중지 버튼 활성화
-            // uploadFileCheck(file, fileIndex); // 해당 파일 업로드 시작
+            $(this).parent().find(".start-button").prop("disabled", false);
         });
     });
 
+    // 목록에 파일 추가
     function addFileToList(file,index){
         const fileListContainer = $("#fileList");
         const fileSizeInKB = (file.size/1024).toFixed(2); // 소수점 2번째자리까지 표시하고 반올림
@@ -159,23 +155,20 @@
                 <button class="stop-button" data-file-index="\${index}" disabled>중지</button>
             </div>
         `;
-        uploadFileList.push(
-            {
-                fileIndex : index,
-                file : file,
-                fileID : "",
-                chunkSize : 0,
-                chunkCount : 0,
-                chunkPosition : 0,
-                status: 0
-            }
-        )
+        const uploadFileItem = {
+            file : file,
+            fileID : '',
+            chunkSize : (1024 * 100),
+            chunkCount : 0,
+            chunkPosition : 0,
+            fileIndex: index,
+            status: 0 // 0 : 업로드 대기 , 1: 업로드 중 ,2 : 업로드 완료 , 4:업로드 중지
+        };
+        uploadFileList.push(uploadFileItem);
         fileListContainer.append(fileListHtml);
-
     }
 
     function uploadFileCheck(file){
-
         if(file.size > policy.maxFileSize){
             alert("업로드 가능한 사이즈를 초과했습니다.");
             return false;
@@ -187,8 +180,8 @@
         return true;
     }
 
-    function initialUpload(file){
-        const data = {originalFileName:file.name ,originalFileSize : file.size,registrationID : "jisung0509"};
+    function initialUpload(uploadFile){
+        const data = {originalFileName:uploadFile.file.name ,originalFileSize : uploadFile.file.size,registrationID : "jisung0509"};
         // 업로드할 파일 체크
         $.ajax({
             url: '/uploadFileCheck',
@@ -198,13 +191,7 @@
             dataType: "json",
             async: false,
             success: function(response) {
-                uploadFileItem.file = file;
-                uploadFileItem.fileID = response.fileID;
-                uploadFileItem.fileSize = response.originalFileSize;
-                uploadFileItem.chunkSize = response.chunkSize;
-                uploadFileItem.chunkCount = response.chunkCount;
-                uploadFileItem.chunkPosition = response.chunkPosition;
-                uploadProcess(uploadFileItem);
+                return response;
             },
             error: function(request, status, error) {
                 console.log("오류가 발생했습니다.");
@@ -214,41 +201,53 @@
 
     //업로드 프로세스
     //청크위치 , 청크사이즈 ,
-    function uploadProcess(uploadFileItem){
+    function uploadProcess(uploadFile) {
         // 업로드 파일 시작 위치 (Byte)
-        const startPos = uploadFileItem.chunkPosition * uploadFileItem.chunkSize;
+        const startPos = uploadFile.chunkPosition * uploadFile.chunkSize;
         // 업로드 파일 종료 위치 (Byte)
-        const endPos = Math.min(uploadFileItem.file.size , startPos + uploadFileItem.chunkSize);
+        const endPos = Math.min(uploadFile.file.size, startPos + uploadFile.chunkSize);
         // 청크 데이터
-        let chunkData = uploadFileItem.file.slice(startPos, endPos);
+        let chunkData = uploadFile.file.slice(startPos, endPos);
+
+        let complete = true;
+
+        const uploadFileItem = this.uploadFileList[index];
+        //진행중
+        if(uploadFileItem.status == 1){
+            const resultData = initialUpload(uploadFileItem);
+            uploadFileItem.fileID = resultData.fileID;
+            uploadFileItem.chunkSize = resultData.chunkSize;
+            uploadFileItem.chunkCount = resultData.chunkCount;
+            uploadFileItem.chunkPosition = resultData.chunkPosition;
+            uploadFileItem.status = 2;
+        }
 
         const formData = new FormData();
-        formData.append('fileID',uploadFileItem.fileID);
-        formData.append('chunkPosition',uploadFileItem.chunkPosition);
-        formData.append('chunkData',chunkData);
-        formData.append('registrationID','jisung0509');
+        formData.append('fileID', uploadFileItem.fileID);
+        formData.append('chunkPosition', uploadFileItem.chunkPosition);
+        formData.append('chunkData', chunkData);
+        formData.append('registrationID', 'jisung0509');
 
         $.ajax({
             url: '/upload',
             type: 'POST',
             data: formData,
-            async: false,
-            contentType: false, // FormData 객체를 사용하면 브라우저가 Content-Type을 multipart/form-data로 올바르게 설정
+            async: false ,
+            contentType: false,
             processData: false,
             success: function(response) {
                 uploadFileItem.chunkPosition = response.chunkPosition;
                 uploadFileItem.chunkCount = response.chunkCount;
                 uploadFileItem.status = response.status;
                 const progress = Math.floor((uploadFileItem.chunkPosition / uploadFileItem.chunkCount) * 100);
-                updateProgressBar(index, progress);
-                if(uploadFileItem.status == 3){
+                updateProgressBar(uploadFileItem.fileIndex, progress);
+                if (uploadFileItem.status == 3) {
                     console.log("청크 업로드 완료");
-                }else if(uploadFileItem.status == 2){
-                    uploadProcess(uploadFileItem);
+                } else if (uploadFileItem.status == 2) {
+                    setTimeout(function() {
+                        uploadProcess(uploadFileItem);
+                    }, 100); // 100ms 지연 (사실상 비동기 실행)
                 }
-
-
-
             },
             error: function(request, status, error) {
                 console.log("오류가 발생했습니다.");
