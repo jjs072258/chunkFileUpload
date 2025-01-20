@@ -127,8 +127,8 @@
             $(this).parent().find(".stop-button").prop("disabled", false); // 중지 버튼 활성화
             if(uploadFileList[fileIndex].status == 0){
                 uploadFileList[fileIndex].status = 1;
-            } else if(uploadFileList[fileIndex] == 4){
-                uploadFileList[fileIndex].status = 3;
+            } else if(uploadFileList[fileIndex].status == 3){
+                uploadFileList[fileIndex].status = 1;
             }
             uploadProcess(uploadFileList[fileIndex]);
         });
@@ -162,7 +162,7 @@
             chunkCount : 0,
             chunkPosition : 0,
             fileIndex: index,
-            status: 0 // 0 : 업로드 대기 , 1: 업로드 중 ,2 : 업로드 완료 , 4:업로드 중지
+            status: 0 // 0 : 업로드 대기 , 1: 업로드 중 ,2 : 업로드 완료 , 3:업로드 중지
         };
         uploadFileList.push(uploadFileItem);
         fileListContainer.append(fileListHtml);
@@ -180,8 +180,9 @@
         return true;
     }
 
-    function initialUpload(uploadFile){
+    function uploadCheck(uploadFile){
         const data = {originalFileName:uploadFile.file.name ,originalFileSize : uploadFile.file.size,registrationID : "jisung0509"};
+        let result;
         // 업로드할 파일 체크
         $.ajax({
             url: '/uploadFileCheck',
@@ -191,12 +192,14 @@
             dataType: "json",
             async: false,
             success: function(response) {
-                return response;
+                result = response;
             },
             error: function(request, status, error) {
                 console.log("오류가 발생했습니다.");
             }
         });
+
+        return result;
     }
 
     //업로드 프로세스
@@ -214,17 +217,18 @@
         const uploadFileItem = uploadFile;
         //진행중
         if(uploadFileItem.status == 1){
-            const resultData = initialUpload(uploadFileItem);
+            const resultData = uploadCheck(uploadFileItem);
             uploadFileItem.fileID = resultData.fileID;
             uploadFileItem.chunkSize = resultData.chunkSize;
             uploadFileItem.chunkCount = resultData.chunkCount;
             uploadFileItem.chunkPosition = resultData.chunkPosition;
             uploadFileItem.fileIndex = resultData.fileIndex;
             uploadFileItem.status = 2;
-        }else if(uploadFileItem.status == 4){
+        }else if(uploadFileItem.status == 3){ // 업로드 중지
             complete = false;
             return;
         }
+
 
         const formData = new FormData();
         formData.append('fileID', uploadFileItem.fileID);
