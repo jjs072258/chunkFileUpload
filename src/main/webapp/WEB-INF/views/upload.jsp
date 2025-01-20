@@ -211,7 +211,7 @@
 
         let complete = true;
 
-        const uploadFileItem = this.uploadFileList[index];
+        const uploadFileItem = uploadFile;
         //진행중
         if(uploadFileItem.status == 1){
             const resultData = initialUpload(uploadFileItem);
@@ -219,7 +219,11 @@
             uploadFileItem.chunkSize = resultData.chunkSize;
             uploadFileItem.chunkCount = resultData.chunkCount;
             uploadFileItem.chunkPosition = resultData.chunkPosition;
+            uploadFileItem.fileIndex = resultData.fileIndex;
             uploadFileItem.status = 2;
+        }else if(uploadFileItem.status == 4){
+            complete = false;
+            return;
         }
 
         const formData = new FormData();
