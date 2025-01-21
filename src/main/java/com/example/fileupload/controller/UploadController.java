@@ -3,6 +3,7 @@ package com.example.fileupload.controller;
 import com.example.fileupload.service.UploadService;
 import com.example.fileupload.vo.FileUploadVO;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,7 +85,7 @@ public class UploadController {
         //업로드 중인건지 확인
         FileUploadVO tempUploadFile = uploadService.getTempUplopadFile(fileUploadVO);
         if(tempUploadFile != null){
-            if(chunkPosition == tempUploadFile.getChunkPosition()){ // 업로드할 청크 위치가 맞으면
+            if(chunkPosition == tempUploadFile.getChunkPosition()){ // 업로드 가능한 상태이면
                 String tempFileName =  tempUploadFile.getFileID()+".part"+tempUploadFile.getChunkPosition();
                 File tempFile = new File(tempUploadFile.getFilePath(),tempFileName);
                 File tempDir = new File(tempUploadFile.getFilePath());
@@ -106,7 +107,7 @@ public class UploadController {
                 }catch (Exception e){
                     return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
                 }
-                if(success){
+                if(success){ // 업데이트 완료
                     //끝까지 업로드가 되었으면
                     if(chunkPosition == tempUploadFile.getChunkCount()){
                         File realFile = new File(REAL_DIR+"/"+tempUploadFile.getOriginalFileName());
@@ -126,8 +127,14 @@ public class UploadController {
                                     }
                                 }
                             }
+                            tempUploadFile.setStatus(3);
+                        }catch (Exception e){
+                            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
                         }
-                        tempUploadFile.setStatus(3);
+
+                        if(tempDir.isDirectory() ){
+                            FileUtils.deleteDirectory(tempDir);
+                        }
                         return new ResponseEntity<>(tempUploadFile,HttpStatus.OK);
                     }else{ //계속 진행
                         tempUploadFile.setStatus(2);

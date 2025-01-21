@@ -100,12 +100,13 @@
     const uploadFileList = [];
 
     $(document).ready(function(e) {
-        let fileIndex = 0;
+        let index = 0;
 
         $(".custom-button").on("click", function() {
             $("#uploadFile").click();
         });
 
+        // 파일 선택
         $("#uploadFile").change(function(e){
             e.preventDefault();
             e.stopPropagation();
@@ -113,9 +114,9 @@
             // 선택된 각 파일에 대해 UI 생성 및 정보 표시
             for (let i = 0; i < selectedFiles.length; i++) {
                 const selectedFile = selectedFiles[i];
-                if(uploadFileCheck(selectedFile)){
-                    addFileToList(selectedFile, fileIndex);
-                    fileIndex++;
+                if(uploadFileCheck(selectedFile)){ // 해당 파일 유효성 검사
+                    addFileToList(selectedFile, index); // 파일 추가
+                    index++;
                 }
             }
         });
@@ -125,34 +126,36 @@
             const fileIndex = $(this).data("file-index");
             $(this).prop("disabled", true); // 시작 버튼 비활성화
             $(this).parent().find(".stop-button").prop("disabled", false); // 중지 버튼 활성화
-            if(uploadFileList[fileIndex].status == 0){
+            const uploadItem = uploadFileList[fileIndex];
+            if(uploadItem.status == 0){ // 대기상태이면 업로드 상태로 변경
                 uploadFileList[fileIndex].status = 1;
-            } else if(uploadFileList[fileIndex].status == 3){
+            } else if(uploadItem.status == 3){ // 중지상태이면 업로드 상태로 변경
                 uploadFileList[fileIndex].status = 1;
             }
-            uploadProcess(uploadFileList[fileIndex]);
+            uploadProcess(uploadItem);
         });
+
         // 중지 버튼 클릭 이벤트
         $(document).on("click",".stop-button",function() {
             const fileIndex = $(this).data("file-index");
-            uploadFileList[fileIndex].status = 3;
-            $(this).prop("disabled", true); // 중비 버튼 비활성화
+            uploadFileList[fileIndex].status = 3; // 중지 상태로 변경
+            $(this).prop("disabled", true); // 중지 버튼 비활성화
             $(this).parent().find(".start-button").prop("disabled", false);
         });
     });
 
     // 목록에 파일 추가
-    function addFileToList(file,index){
+    function addFileToList(file,fileIndex){
         const fileListContainer = $("#fileList");
         const fileSizeInKB = (file.size/1024).toFixed(2); // 소수점 2번째자리까지 표시하고 반올림
         let fileListHtml = `
-            <div class="file-item" id="file-\${index}">
+            <div class="file-item" id="file-\${fileIndex}">
                 <span>\${file.name} (\${fileSizeInKB} KB)</span>
                 <div class="progress-bar-container">
                     <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
                 </div>
-                <button class="start-button" data-file-index="\${index}">시작</button>
-                <button class="stop-button" data-file-index="\${index}" disabled>중지</button>
+                <button class="start-button" data-file-index="\${fileIndex}">시작</button>
+                <button class="stop-button" data-file-index="\${fileIndex}" disabled>중지</button>
             </div>
         `;
         const uploadFileItem = {
@@ -161,13 +164,15 @@
             chunkSize : (1024 * 100),
             chunkCount : 0,
             chunkPosition : 0,
-            fileIndex: index,
+            fileIndex: fileIndex,
             status: 0 // 0 : 업로드 대기 , 1: 업로드 중 ,2 : 업로드 완료 , 3:업로드 중지
         };
+        //  배열에 넣어줌
         uploadFileList.push(uploadFileItem);
         fileListContainer.append(fileListHtml);
     }
 
+    // 파일 유효성 체크
     function uploadFileCheck(file){
         if(file.size > policy.maxFileSize){
             alert("업로드 가능한 사이즈를 초과했습니다.");
@@ -180,9 +185,72 @@
         return true;
     }
 
+    //업로드 프로세스
+    //청크위치 , 청크사이즈 ,
+    function uploadProcess(uploadFile) {
+        // 업로드 파일 시작 위치 (Byte)
+        const startPos = uploadFile.chunkPosition * uploadFile.chunkSize;
+        // 업로드 파일 종료 위치 (Byte)
+        const endPos = Math.min(uploadFile.file.size, startPos + uploadFile.chunkSize);
+        // 청크 데이터
+        let chunkData = uploadFile.file.slice(startPos, endPos);
+
+        let isUpload = true;
+
+        const uploadFileItem = uploadFile;
+        //업로드 진행중
+        if(uploadFileItem.status == 1){
+            const resultData = uploadCheck(uploadFileItem);
+            if(resultData){
+                uploadFileItem.fileID = resultData.fileID;
+                uploadFileItem.chunkSize = resultData.chunkSize;
+                uploadFileItem.chunkCount = resultData.chunkCount;
+                uploadFileItem.chunkPosition = resultData.chunkPosition;
+                uploadFileItem.status = 2; // 업로드 진행중
+            }
+        }else if(uploadFileItem.status == 3){ // 업로드 중지
+            isUpload = false;
+        }
+
+        if(isUpload){
+            const formData = new FormData();
+            formData.append('fileID', uploadFileItem.fileID);
+            formData.append('chunkPosition', uploadFileItem.chunkPosition);
+            formData.append('chunkData', chunkData);
+            formData.append('registrationID', 'jisung0509');
+
+            $.ajax({
+                url: '/upload',
+                type: 'POST',
+                data: formData,
+                async: false ,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    uploadFileItem.chunkPosition = response.chunkPosition;
+                    uploadFileItem.chunkCount = response.chunkCount;
+                    uploadFileItem.status = response.status;
+                    const progress = Math.floor((uploadFileItem.chunkPosition / uploadFileItem.chunkCount) * 100);
+                    updateProgressBar(uploadFileItem.fileIndex, progress);
+                    if (uploadFileItem.status == 3) {
+                        console.log("청크 업로드 완료");
+                    } else if (uploadFileItem.status == 2) {
+                        setTimeout(function() {
+                            uploadProcess(uploadFileItem);
+                        }, 100); // 100ms 지연 (사실상 비동기 실행)
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("오류가 발생했습니다.");
+                }
+            });
+        }
+    }
+
+    // 업로드할 파일 정보를 가져옴
     function uploadCheck(uploadFile){
         const data = {originalFileName:uploadFile.file.name ,originalFileSize : uploadFile.file.size,registrationID : "jisung0509"};
-        let result;
+        let result = null;
         // 업로드할 파일 체크
         $.ajax({
             url: '/uploadFileCheck',
@@ -200,67 +268,6 @@
         });
 
         return result;
-    }
-
-    //업로드 프로세스
-    //청크위치 , 청크사이즈 ,
-    function uploadProcess(uploadFile) {
-        // 업로드 파일 시작 위치 (Byte)
-        const startPos = uploadFile.chunkPosition * uploadFile.chunkSize;
-        // 업로드 파일 종료 위치 (Byte)
-        const endPos = Math.min(uploadFile.file.size, startPos + uploadFile.chunkSize);
-        // 청크 데이터
-        let chunkData = uploadFile.file.slice(startPos, endPos);
-
-        let complete = true;
-
-        const uploadFileItem = uploadFile;
-        //진행중
-        if(uploadFileItem.status == 1){
-            const resultData = uploadCheck(uploadFileItem);
-            uploadFileItem.fileID = resultData.fileID;
-            uploadFileItem.chunkSize = resultData.chunkSize;
-            uploadFileItem.chunkCount = resultData.chunkCount;
-            uploadFileItem.chunkPosition = resultData.chunkPosition;
-            uploadFileItem.fileIndex = resultData.fileIndex;
-            uploadFileItem.status = 2;
-        }else if(uploadFileItem.status == 3){ // 업로드 중지
-            complete = false;
-            return;
-        }
-
-
-        const formData = new FormData();
-        formData.append('fileID', uploadFileItem.fileID);
-        formData.append('chunkPosition', uploadFileItem.chunkPosition);
-        formData.append('chunkData', chunkData);
-        formData.append('registrationID', 'jisung0509');
-
-        $.ajax({
-            url: '/upload',
-            type: 'POST',
-            data: formData,
-            async: false ,
-            contentType: false,
-            processData: false,
-            success: function(response) {
-                uploadFileItem.chunkPosition = response.chunkPosition;
-                uploadFileItem.chunkCount = response.chunkCount;
-                uploadFileItem.status = response.status;
-                const progress = Math.floor((uploadFileItem.chunkPosition / uploadFileItem.chunkCount) * 100);
-                updateProgressBar(uploadFileItem.fileIndex, progress);
-                if (uploadFileItem.status == 3) {
-                    console.log("청크 업로드 완료");
-                } else if (uploadFileItem.status == 2) {
-                    setTimeout(function() {
-                        uploadProcess(uploadFileItem);
-                    }, 100); // 100ms 지연 (사실상 비동기 실행)
-                }
-            },
-            error: function(request, status, error) {
-                console.log("오류가 발생했습니다.");
-            }
-        });
     }
 
     function updateProgressBar(index, progress) {
