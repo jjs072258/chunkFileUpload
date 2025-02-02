@@ -27,4 +27,8 @@ public class UploadService {
     public boolean updateTempUplopadFile(FileUploadVO vo){
         return uploadMapper.updateTempUploadFile(vo) == 1;
     }
+
+    public boolean deleteTempUplopadFile(FileUploadVO vo){
+        return uploadMapper.deleteTempUploadFile(vo) == 1;
+    }
 }

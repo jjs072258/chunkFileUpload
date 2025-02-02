@@ -15,4 +15,6 @@ public interface UploadMapper {
     FileUploadVO selectTempUplopadFile(FileUploadVO vo);
 
     int updateTempUploadFile(FileUploadVO vo);
+
+    int deleteTempUploadFile(FileUploadVO vo);
 }

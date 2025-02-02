@@ -72,6 +72,35 @@ public class UploadController {
 
     }
 
+    @PostMapping("/uploadDelete")
+    @ResponseBody
+    public ResponseEntity<String> deleteFile(FileUploadVO fileUploadVO) {
+
+        //업로드 중인건지 확인
+        FileUploadVO tempUploadFile = uploadService.getTempUplopadFile(fileUploadVO);
+        if (tempUploadFile != null) {
+            // 파일 삭제
+            File tempFile = new File(tempUploadFile.getFilePath());
+            try {
+                FileUtils.deleteDirectory(tempFile);
+                System.out.println("폴더가 삭제되었습니다.");
+            } catch (IOException e) {
+                System.err.println("폴더 삭제 중 오류가 발생했습니다: " + e.getMessage());
+                return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
+            }
+
+            // 삭제
+            boolean result = uploadService.deleteTempUplopadFile(fileUploadVO);
+            if (result) {
+                return new ResponseEntity<>("삭제 완료",HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PostMapping("/upload")
     @ResponseBody
     //파일아이디 , 현재청크위치 , 청크파일을 가져옴
@@ -85,7 +114,7 @@ public class UploadController {
         //업로드 중인건지 확인
         FileUploadVO tempUploadFile = uploadService.getTempUplopadFile(fileUploadVO);
         if(tempUploadFile != null){
-            if(chunkPosition == tempUploadFile.getChunkPosition()){ // 업로드 가능한 상태이면
+            if(chunkPosition == tempUploadFile.getChunkPosition()){ // 업로드할 청크 위치가 맞으면
                 String tempFileName =  tempUploadFile.getFileID()+".part"+tempUploadFile.getChunkPosition();
                 File tempFile = new File(tempUploadFile.getFilePath(),tempFileName);
                 File tempDir = new File(tempUploadFile.getFilePath());
@@ -107,7 +136,7 @@ public class UploadController {
                 }catch (Exception e){
                     return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
                 }
-                if(success){ // 업데이트 완료
+                if(success){
                     //끝까지 업로드가 되었으면
                     if(chunkPosition == tempUploadFile.getChunkCount()){
                         File realFile = new File(REAL_DIR+"/"+tempUploadFile.getOriginalFileName());
@@ -127,20 +156,13 @@ public class UploadController {
                                     }
                                 }
                             }
-                            tempUploadFile.setStatus(3);
-                        }catch (Exception e){
-                            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
                         }
-
-                        if(tempDir.isDirectory() ){
-                            FileUtils.deleteDirectory(tempDir);
-                        }
+                        tempUploadFile.setStatus(4);
                         return new ResponseEntity<>(tempUploadFile,HttpStatus.OK);
                     }else{ //계속 진행
-                        tempUploadFile.setStatus(2);
+                        tempUploadFile.setStatus(1);
                         return new ResponseEntity<>(tempUploadFile,HttpStatus.OK);
                     }
-
                 }else{
                     return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
                 }

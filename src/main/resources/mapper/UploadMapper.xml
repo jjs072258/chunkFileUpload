@@ -81,4 +81,11 @@
             )
     </insert>
 
+    <delete id="deleteTempUploadFile" parameterType="com.example.fileupload.vo.FileUploadVO">
+        DELETE
+        FROM TB_UP_TEMPFILE
+        WHERE FILE_ID = #{fileID}
+          AND REG_ID = #{registrationID}
+    </delete>
+
 </mapper>
