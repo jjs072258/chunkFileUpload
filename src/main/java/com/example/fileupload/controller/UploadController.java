@@ -144,7 +144,7 @@ public class UploadController {
                         if (!readDir.exists()) {
                             readDir.mkdirs();
                         }
-                        try (FileOutputStream fos = new FileOutputStream(realFile)){
+                        try (FileOutputStream fos = new FileOutputStream (realFile)){
                             for(int i=0;i<tempUploadFile.getChunkCount();i++){
                                 // 임시폴더에 있는 파일 가져오기
                                 File part = new File(tempUploadFile.getFilePath()+"/"+tempUploadFile.getFileID()+".part"+i);

@@ -144,10 +144,12 @@
             $(this).parent().find(".stop-button").prop("disabled", false); // 중지 버튼 활성화
             if(uploadFileList[fileIndex].status == 0){
                 uploadFileList[fileIndex].status = 1;
-            } else if(uploadFileList[fileIndex].status == 3){
+            } else if(uploadFileList[fileIndex].status == 2){
                 uploadFileList[fileIndex].status = 1;
             }
-            uploadProcess(uploadFileList[fileIndex]);
+            setTimeout(function() {
+                uploadProcess(uploadFileList[fileIndex]);
+            }, 100); // 100ms 지연 (사실상 비동기 실행)
         });
         // 중지 버튼 클릭 이벤트
         $(document).on("click",".stop-button",function() {
@@ -241,7 +243,7 @@
         // 청크 데이터
         let chunkData = uploadFile.file.slice(startPos, endPos);
 
-        let complete = true;
+        let complete = false;
 
         const uploadFileItem = uploadFile;
         //진행중
@@ -254,11 +256,20 @@
             uploadFileItem.fileIndex = resultData.fileIndex;
             uploadFileItem.status = 1;
         }else if(uploadFileItem.status == 2){ // 업로드 중지
+            console.log("업로드 중지");
             complete = false;
             return;
         }else if(uploadFileItem.status == 4){ // 업로드 완료
+            console.log("업로드 완료");
+            complete = true;
+        }
+
+        if(complete){
+            $("#file-"+uploadFileItem.fileIndex).find(".stop-button").prop('disabled',true);
+            $("#file-"+uploadFileItem.fileIndex).find(".delete-button").prop('disabled',false);
             return;
         }
+
 
 
         const formData = new FormData();
@@ -280,13 +291,9 @@
                 uploadFileItem.status = response.status;
                 const progress = Math.floor((uploadFileItem.chunkPosition / uploadFileItem.chunkCount) * 100);
                 updateProgressBar(uploadFileItem.fileIndex, progress);
-                if (uploadFileItem.status == 4) {
-                    console.log("청크 업로드 완료");
-                } else if (uploadFileItem.status == 1) { // 업로드 진행
-                    setTimeout(function() {
-                        uploadProcess(uploadFileItem);
-                    }, 100); // 100ms 지연 (사실상 비동기 실행)
-                }
+                setTimeout(function() {
+                    uploadProcess(uploadFileItem);
+                }, 100); // 100ms 지연 (사실상 비동기 실행)
             },
             error: function(request, status, error) {
                 console.log("오류가 발생했습니다.");
