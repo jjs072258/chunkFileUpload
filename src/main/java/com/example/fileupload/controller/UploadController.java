@@ -67,6 +67,7 @@ public class UploadController {
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
         }else{ // 기존에 파일이 있으면
+            result.setFileIndex(fileUploadVO.getFileIndex());
             return new ResponseEntity<>(result,HttpStatus.OK);
         }
 
@@ -114,6 +115,7 @@ public class UploadController {
         //업로드 중인건지 확인
         FileUploadVO tempUploadFile = uploadService.getTempUplopadFile(fileUploadVO);
         if(tempUploadFile != null){
+            tempUploadFile.setFileIndex(fileUploadVO.getFileIndex());
             if(chunkPosition == tempUploadFile.getChunkPosition()){ // 업로드할 청크 위치가 맞으면
                 String tempFileName =  tempUploadFile.getFileID()+".part"+tempUploadFile.getChunkPosition();
                 File tempFile = new File(tempUploadFile.getFilePath(),tempFileName);

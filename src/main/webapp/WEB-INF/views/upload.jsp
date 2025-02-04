@@ -212,7 +212,7 @@
     }
 
     function uploadCheck(uploadFile){
-        const data = {originalFileName:uploadFile.file.name ,originalFileSize : uploadFile.file.size,registrationID : "jisung0509"};
+        const data = {originalFileName:uploadFile.file.name ,originalFileSize : uploadFile.file.size,registrationID : "jisung0509",fileIndex:uploadFile.fileIndex};
         let result;
         // 업로드할 파일 체크
         $.ajax({
@@ -277,6 +277,7 @@
         formData.append('chunkPosition', uploadFileItem.chunkPosition);
         formData.append('chunkData', chunkData);
         formData.append('registrationID', 'jisung0509');
+        formData.append('fileIndex',uploadFileItem.fileIndex);
 
         $.ajax({
             url: '/upload',
